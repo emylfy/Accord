@@ -18,6 +18,10 @@ import org.akanework.gramophone.R
 import org.akanework.gramophone.ui.adapters.ViewPager2Adapter.Companion.mapSettingToTabList
 import org.akanework.gramophone.ui.adapters.ViewPager2Adapter.Companion.mapTabListToSetting
 
+// Settings preference that shows a drag-and-drop dialog for reordering library tabs.
+// The tab list uses a null sentinel as a separator: tabs above it are visible,
+// tabs below are hidden. The separator itself can be dragged to show/hide tabs,
+// but at least one tab must remain visible (separator can't go to position 0).
 class TabOrderPreference(context: Context, attrs: AttributeSet) : DialogPreference(context, attrs) {
     private var _value = ""
     var value
@@ -55,11 +59,12 @@ class TabOrderPreference(context: Context, attrs: AttributeSet) : DialogPreferen
                     viewHolder: RecyclerView.ViewHolder,
                     target: RecyclerView.ViewHolder
                 ): Boolean {
-                    // Separator can't go to position 0 (at least one tab must be visible)
+                    // Constraint: separator can't go to position 0 — at least one tab must be visible
                     if (viewHolder is TabOrderSeparatorViewHolder &&
                         target.bindingAdapterPosition == 0
                     ) return false
-                    // First visible tab can't go below separator
+                    // Constraint: the last visible tab can't cross below the separator
+                    // (would leave zero visible tabs)
                     if (target.bindingAdapterPosition >= adapter.value.indexOf(null) &&
                         viewHolder.bindingAdapterPosition == 0
                     ) return false

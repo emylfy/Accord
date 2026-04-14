@@ -746,6 +746,13 @@ object MediaStoreUtils {
             ).build()
     }
 
+    // Deletes a song from MediaStore. Returns a nested callback chain to handle
+    // Android's scoped storage permission flow:
+    //   .first = true if we can delete directly, false if user permission is needed first
+    //   .second() = prepares the delete (returns IntentSender for permission dialog, or null if none needed)
+    //   The innermost () -> Boolean performs the actual delete and returns success.
+    // On Android R+ (scoped storage v2), uses MediaStore.createDeleteRequest.
+    // On Android Q (scoped storage v1), catches RecoverableSecurityException to prompt user.
     fun deleteSong(context: Context, item: MediaItem):
             Pair<Boolean, () -> (() -> Pair<IntentSender?, () -> Boolean>)> {
         val uri = ContentUris.withAppendedId(

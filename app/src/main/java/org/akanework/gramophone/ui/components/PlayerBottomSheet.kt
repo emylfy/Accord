@@ -165,6 +165,16 @@ class PlayerBottomSheet private constructor(
             }
         }
 
+        // Long press on collapsed player → stop playback and hide
+        setOnLongClickListener {
+            if (standardBottomSheetBehavior!!.state == BottomSheetBehavior.STATE_COLLAPSED) {
+                it.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                instance?.stop()
+                instance?.clearMediaItems()
+                true
+            } else false
+        }
+
         bottomSheetPreviewControllerButton.setOnClickListener {
             it.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
             instance?.playOrPause()

@@ -315,6 +315,8 @@ class MainActivity : AppCompatActivity() {
         return autoPlay.also { autoPlay = false }
     }
 
+    // Intercepts volume keys when music is loaded to change STREAM_MUSIC volume
+    // silently (flag 0) — suppresses the system volume overlay popup.
     override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
         val player = getPlayer()
         if (player != null && player.mediaItemCount > 0 &&

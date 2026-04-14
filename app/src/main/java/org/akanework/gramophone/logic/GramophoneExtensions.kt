@@ -277,14 +277,6 @@ fun MediaController.getSessionId(): Int? =
         }
     } catch (e: Exception) { Log.w("MediaController", "getSessionId failed", e); null }
 
-fun MediaController.getSessionId(): Int? =
-    sendCustomCommand(
-        SessionCommand(SERVICE_GET_SESSION, Bundle.EMPTY),
-        Bundle.EMPTY
-    ).get().extras.getInt("session", C.AUDIO_SESSION_ID_UNSET).let {
-        if (it == C.AUDIO_SESSION_ID_UNSET) null else it
-    }
-
 // https://twitter.com/Piwai/status/1529510076196630528
 fun Handler.postAtFrontOfQueueAsync(callback: Runnable) {
     sendMessageAtFrontOfQueue(Message.obtain(this, callback).apply {

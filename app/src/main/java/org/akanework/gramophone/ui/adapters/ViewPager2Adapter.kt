@@ -72,6 +72,8 @@ class ViewPager2Adapter(
 
     fun getLabelResId(position: Int) = tabs[position]!!.label
 
+    // Only tabs before the null separator are visible — null acts as the boundary
+    // between shown and hidden tabs in the list.
     override fun getItemCount() = tabs.indexOf(null)
         .also { if (it == -1) throw IllegalStateException("indexOf null is -1 in tab list?") }
 
@@ -103,6 +105,11 @@ class ViewPager2Adapter(
             Playlist(R.id.playlists, R.string.category_playlists)
         }
 
+        // Deserializes a comma-separated preference string into a tab list.
+        // Format: "Songs,Albums,,Artists,Genres" — empty segment becomes null (the separator).
+        // Tabs above the null separator are visible; tabs below are hidden.
+        // Handles stale/unknown entries (silently dropped) and missing tabs (appended at end).
+        // Deduplicates by removing all copies if a tab appears more than once.
         fun mapSettingToTabList(setting: String): List<Tab?> {
             val stList = if (setting.isNotEmpty())
                 setting.split(",").flatMap {

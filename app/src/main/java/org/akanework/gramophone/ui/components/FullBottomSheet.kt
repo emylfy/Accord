@@ -147,6 +147,8 @@ class FullBottomSheet @JvmOverloads constructor(
     private val activity
         get() = context as MainActivity
     private var controllerFuture: ListenableFuture<MediaController>? = null
+    // Safe accessor for the MediaController — returns null if the connection
+    // is still pending or was cancelled, avoiding blocking on Future.get().
     private val instance: MediaController?
         get() = if (controllerFuture?.isDone == false || controllerFuture?.isCancelled == true)
             null else controllerFuture?.get()
@@ -328,20 +330,29 @@ class FullBottomSheet @JvmOverloads constructor(
     private val bottomSheetFadingVerticalEdgeLayout: FadingVerticalEdgeLayout
     private var playlistNowPlaying: TextView? = null
     private var playlistNowPlayingCover: ImageView? = null
+    // Prevents recursive toggle: when switching from lyrics→playlist (or vice versa),
+    // we programmatically uncheck one button which fires its listener — triggerLock
+    // tells that listener to skip its logic since we're already handling the transition.
     private var triggerLock: Boolean = false
     var bottomSheetFullBlendView: BlendView? = null
     private var lastDisposable: Disposable? = null
+    // When true, the next lyric scroll will be instant (no smooth scroll).
+    // Set on track change / lyric reload so the first scroll doesn't animate from a stale position.
     private var animationLock: Boolean = false
     private var hideJob: CoroutineScope? = null
     private var startY = 0f
     private var isScrollingDown = false
     private var animationBroadcastLock = false
     private var queryFavouriteJob: CoroutineScope? = null
+    // Prevents infinite loop between the two favourite buttons (player + playlist view):
+    // toggling one programmatically sets the other, which would fire its listener again.
     private var favouriteLock = false
     private val audioManager: AudioManager
     private var volumeChangeReceiver: VolumeChangeReceiver
     private val volumeChangeReceiverIntentFilter: IntentFilter
     var fingerReleaseJob: Job? = null
+    // True while user is dragging the volume slider — prevents the VolumeChangeReceiver
+    // from overwriting the slider value with the system volume during the gesture.
     private var volumeLock = false
     private var currentVolume: Int = 0
     private var hasScheduledShowJob = false
@@ -1111,6 +1122,10 @@ class FullBottomSheet @JvmOverloads constructor(
         duration = VIEW_TRANSIT_DURATION
     }
 
+    // Transitions between the main cover view and the playlist mini-cover view.
+    // When hiding (isVisible=false), if the cover is currently shrunk (scale < 1.0 from
+    // seekbar interaction), it first animates back to full size before running the
+    // MaterialContainerTransform to avoid a visual jump.
     private fun changeMovableFrame(isVisible: Boolean) {
         if (isVisible) {
             manipulateTopOverlayVisibility(INVISIBLE)
@@ -1703,6 +1718,9 @@ class FullBottomSheet @JvmOverloads constructor(
                 }
             }
 
+            // Drives per-syllable highlight animation for word-synced (Extended LRC) lyrics.
+            // Creates a ValueAnimator spanning from now until the lyric's end timestamp,
+            // updating each word's highlight progress based on its individual duration range.
             @OptIn(UnstableApi::class)
             fun updateLyric(
                 position: Int,
@@ -2361,6 +2379,11 @@ class FullBottomSheet @JvmOverloads constructor(
             val closeButton: MaterialButton = view.findViewById(R.id.close)
         }
 
+        // Handles drag-and-drop reorder in the playlist.
+        // playlist.first = display-to-player index mapping (what the user sees → actual media index)
+        // playlist.second = the actual media items in player order
+        // We convert the display positions (from/to) to player-side indices (from1/to1),
+        // update both lists, then call moveMediaItem to sync with ExoPlayer.
         fun onRowMoved(from: Int, to: Int) {
             val mediaController = activity.getPlayer()
             val from1 = playlist.first.removeAt(from)
@@ -2410,6 +2433,8 @@ class FullBottomSheet @JvmOverloads constructor(
         }
     }
 
+    // Returns indices of all lyrics whose time range contains the current playback position.
+    // Multiple indices are possible for overlapping lyrics (e.g. main + background vocal).
     // https://github.com/androidx/media/issues/1578
     @OptIn(UnstableApi::class)
     private fun getNewIndex(): List<Int> {
@@ -2424,6 +2449,12 @@ class FullBottomSheet @JvmOverloads constructor(
         return filteredList
     }
 
+    // Called every frame (via positionCallback) to sync lyric highlighting with playback.
+    // 1. getNewIndex() finds which lyrics are active at current position
+    // 2. Compares with previously highlighted lines, updates highlight on changed lines
+    // 3. ignoredPositionAtMost: when user taps a lyric to seek, we skip re-highlighting
+    //    lines at or before that position to prevent the scroll from jumping back
+    // 4. Scrolls to the new focus lyric (lowest active index not ignored)
     fun updateLyric(
         resume: Boolean = false
     ) {
@@ -2564,6 +2595,10 @@ class FullBottomSheet @JvmOverloads constructor(
     private val inComingInterpolator = PathInterpolator(0.96f, 0.43f, 0.72f, 1f)
     private val liftInterpolator = PathInterpolator(0.17f, 0f, -0.15f, 1f)
 
+    // Vsync-driven frame callback that updates the seekbar position, time labels,
+    // and lyric sync every frame while playback is active. Self-reschedules via
+    // choreographer.postFrameCallback(this) to stay in sync with display refresh rate.
+    // Stops when playback pauses (frameCallbackRunning = false).
     private val positionCallback = object : android.view.Choreographer.FrameCallback {
         @SuppressLint("SetTextI18n")
         override fun doFrame(frameTimeNanos: Long) {

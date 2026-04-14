@@ -44,7 +44,7 @@ class AboutFragment : BaseElevatedFragment(null) {
 
         // Accord repo
         rootView.findViewById<View>(R.id.info_card).setOnClickListener {
-            openUrl("https://github.com/emylfy/AccordLegacy")
+            openUrl("https://github.com/emylfy/Accord")
         }
         // Main developers
         rootView.findViewById<View>(R.id.akane_cv).setOnClickListener { openUrl("https://github.com/AkaneTan") }

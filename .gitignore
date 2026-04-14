@@ -10,3 +10,4 @@
 local.properties
 package.properties
 .claude/
+keystore.jks

@@ -664,6 +664,11 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
         }
     }
 
+    // Applies or defers a shuffle order.
+    // lazy=true: stores the factory for later — used when shuffle is toggled but no playlist
+    //   is loaded yet (onTimelineChanged will apply it when the playlist arrives).
+    // lazy=false: immediately creates and applies the shuffle order to the player.
+    //   If the current state is invalid (e.g. stale playlist), erases saved shuffle and rethrows.
     private fun applyShuffleSeed(lazy: Boolean, factory:
         (Int) -> ((CircularShuffleOrder) -> Unit) -> CircularShuffleOrder) {
         if (lazy) {
