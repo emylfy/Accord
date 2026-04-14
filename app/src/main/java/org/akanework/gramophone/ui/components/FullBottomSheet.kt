@@ -84,6 +84,7 @@ import com.google.android.flexbox.JustifyContent
 import com.google.android.material.bottomsheet.BottomSheetDragHandleView
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.slider.OverlaySlider
 import com.google.android.material.timepicker.MaterialTimePicker
 import com.google.android.material.timepicker.TimeFormat
@@ -99,6 +100,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.akanework.gramophone.R
+import org.akanework.gramophone.ui.fragments.BaseWrapperFragment
+import org.akanework.gramophone.ui.fragments.BrowseFragment
+import org.akanework.gramophone.ui.fragments.DetailDialogFragment
 import org.akanework.gramophone.logic.GramophonePlaybackService
 import org.akanework.gramophone.logic.animateText
 import org.akanework.gramophone.logic.checkIfNegativeOrNullOrMaxedOut
@@ -149,14 +153,13 @@ class FullBottomSheet @JvmOverloads constructor(
 
     private var wrappedContext: Context? = null
     private var isUserTracking = false
-    private var runnableRunning = false
+    private var frameCallbackRunning = false
+    private val choreographer = android.view.Choreographer.getInstance()
     private var firstTime = false
     private val prefs = PreferenceManager.getDefaultSharedPreferences(context)
-
     val interpolator = PathInterpolator(0.4f, 0.2f, 0f, 1f)
 
     companion object {
-        const val SLIDER_UPDATE_INTERVAL = 100L
         const val VIEW_TRANSIT_DURATION = 350L
         const val LYRIC_SCROLL_DURATION = 600L
         const val SHRINK_VALUE_DEFAULT = 0.93F
@@ -316,6 +319,8 @@ class FullBottomSheet @JvmOverloads constructor(
     private val bottomSheetStarButtonBackground: ImageView
     private val bottomSheetStarButtonPlaylist: MaterialButton
     private val bottomSheetStarButtonPlaylistBackground: ImageView
+    private val bottomSheetMoreButton: MaterialButton
+    private val bottomSheetMoreButtonPlaylist: MaterialButton
     private val bottomSheetMoreButtonBackground: ImageView
     private val bottomSheetMoreButtonPlaylistBackground: ImageView
     private val bottomSheetActionBar: LinearLayout
@@ -394,6 +399,8 @@ class FullBottomSheet @JvmOverloads constructor(
         bottomSheetStarButtonBackground = findViewById(R.id.star_bg)
         bottomSheetStarButtonPlaylist = findViewById(R.id.star_btn_playlist)
         bottomSheetStarButtonPlaylistBackground = findViewById(R.id.star_btn_playlist_bg)
+        bottomSheetMoreButton = findViewById(R.id.more_btn)
+        bottomSheetMoreButtonPlaylist = findViewById(R.id.more_btn_playlist)
         bottomSheetMoreButtonBackground = findViewById(R.id.more_bg)
         bottomSheetMoreButtonPlaylistBackground = findViewById(R.id.more_btn_playlist_bg)
         bottomSheetInfinityButton = findViewById(R.id.sheet_infinity)
@@ -732,9 +739,19 @@ class FullBottomSheet @JvmOverloads constructor(
             it.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
             instance?.seekToPreviousMediaItem()
         }
+        bottomSheetFullPreviousButton.setOnLongClickListener {
+            ViewCompat.performHapticFeedback(it, HapticFeedbackConstantsCompat.LONG_PRESS)
+            instance?.seekBack()
+            true
+        }
         bottomSheetFullNextButton.setOnClickListener {
             it.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
             instance?.seekToNextMediaItem()
+        }
+        bottomSheetFullNextButton.setOnLongClickListener {
+            ViewCompat.performHapticFeedback(it, HapticFeedbackConstantsCompat.LONG_PRESS)
+            instance?.seekForward()
+            true
         }
         bottomSheetShuffleButton.addOnCheckedChangeListener { _, isChecked ->
             instance?.shuffleModeEnabled = isChecked
@@ -769,6 +786,53 @@ class FullBottomSheet @JvmOverloads constructor(
         bottomSheetStarButtonPlaylist.setOnClickListener {
             it.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
         }
+
+        val moreClickListener = View.OnClickListener { view ->
+            view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+            val items = arrayOf(
+                context.getString(R.string.details),
+                context.getString(R.string.share)
+            )
+            MaterialAlertDialogBuilder(wrappedContext ?: context)
+                .setItems(items) { _, which ->
+                    when (which) {
+                        0 -> {
+                            val mediaItem = instance?.currentMediaItem ?: return@setItems
+                            val position = activity.libraryViewModel.mediaItemList.value
+                                ?.indexOfFirst { it.mediaId == mediaItem.mediaId } ?: -1
+                            if (position >= 0) {
+                                val browseFragment = activity.supportFragmentManager
+                                    .fragments.firstNotNullOfOrNull {
+                                        it.childFragmentManager.fragments.filterIsInstance<BrowseFragment>().firstOrNull()
+                                    }
+                                val wrapper = browseFragment?.childFragmentManager?.fragments
+                                    ?.filterIsInstance<BaseWrapperFragment>()?.firstOrNull()
+                                wrapper?.replaceFragment(DetailDialogFragment()) {
+                                    putInt("Position", position)
+                                }
+                            }
+                        }
+                        1 -> {
+                            val mediaItem = instance?.currentMediaItem
+                            val mediaId = mediaItem?.mediaId?.toLongOrNull()
+                            if (mediaId != null) {
+                                val uri = android.content.ContentUris.withAppendedId(
+                                    android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, mediaId
+                                )
+                                val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                    type = mediaItem.localConfiguration?.mimeType ?: "audio/*"
+                                    putExtra(android.content.Intent.EXTRA_STREAM, uri)
+                                    addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                }
+                                context.startActivity(android.content.Intent.createChooser(intent, null))
+                            }
+                        }
+                    }
+                }
+                .show()
+        }
+        bottomSheetMoreButton.setOnClickListener(moreClickListener)
+        bottomSheetMoreButtonPlaylist.setOnClickListener(moreClickListener)
 
         bottomSheetFullLyricButton.setOnClickListener {
             it.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
@@ -1114,7 +1178,7 @@ class FullBottomSheet @JvmOverloads constructor(
     }
 
     fun onStop() {
-        runnableRunning = false
+        frameCallbackRunning = false
         instance?.removeListener(this)
         controllerFuture = null
     }
@@ -1214,8 +1278,8 @@ class FullBottomSheet @JvmOverloads constructor(
             isHires(mediaItem?.localConfiguration?.mimeType?.contains("flac") == true)
             startQueryFavourite()
             if (playlistNowPlaying != null) {
-                playlistNowPlaying!!.text = mediaItem?.mediaMetadata?.title
-                playlistNowPlayingCover!!.load(mediaItem?.mediaMetadata?.artworkUri) {
+                playlistNowPlaying?.text = mediaItem?.mediaMetadata?.title
+                playlistNowPlayingCover?.load(mediaItem?.mediaMetadata?.artworkUri) {
                     coolCrossfade(true)
                     placeholder(R.drawable.ic_default_cover)
                     error(R.drawable.ic_default_cover)
@@ -1334,9 +1398,9 @@ class FullBottomSheet @JvmOverloads constructor(
                     )
                 bottomSheetFullControllerButton.setTag(R.id.play_next, 1)
             }
-            if (!runnableRunning) {
-                handler.postDelayed(positionRunnable, SLIDER_UPDATE_INTERVAL)
-                runnableRunning = true
+            if (!frameCallbackRunning) {
+                choreographer.postFrameCallback(positionCallback)
+                frameCallbackRunning = true
             }
         } else if (playbackState != Player.STATE_BUFFERING) {
             if (bottomSheetFullControllerButton.getTag(R.id.play_next) as Int? != 2) {
@@ -1369,16 +1433,17 @@ class FullBottomSheet @JvmOverloads constructor(
     }
 
     private fun dumpPlaylist(): Pair<MutableList<Int>, MutableList<MediaItem>> {
+        val player = instance ?: return Pair(mutableListOf(), mutableListOf())
         val items = LinkedList<MediaItem>()
-        for (i in 0 until instance!!.mediaItemCount) {
-            items.add(instance!!.getMediaItemAt(i))
+        for (i in 0 until player.mediaItemCount) {
+            items.add(player.getMediaItemAt(i))
         }
         val indexes = LinkedList<Int>()
-        val s = instance!!.shuffleModeEnabled
-        var i = instance!!.currentTimeline.getFirstWindowIndex(s)
+        val s = player.shuffleModeEnabled
+        var i = player.currentTimeline.getFirstWindowIndex(s)
         while (i != C.INDEX_UNSET) {
             indexes.add(i)
-            i = instance!!.currentTimeline.getNextWindowIndex(i, Player.REPEAT_MODE_OFF, s)
+            i = player.currentTimeline.getNextWindowIndex(i, Player.REPEAT_MODE_OFF, s)
         }
         return Pair(indexes, items)
     }
@@ -2489,15 +2554,21 @@ class FullBottomSheet @JvmOverloads constructor(
     private val inComingInterpolator = PathInterpolator(0.96f, 0.43f, 0.72f, 1f)
     private val liftInterpolator = PathInterpolator(0.17f, 0f, -0.15f, 1f)
 
-    private val positionRunnable = object : Runnable {
+    private val positionCallback = object : android.view.Choreographer.FrameCallback {
         @SuppressLint("SetTextI18n")
-        override fun run() {
-            if (!runnableRunning) return
+        override fun doFrame(frameTimeNanos: Long) {
+            if (!frameCallbackRunning) return
+            if (instance?.isPlaying != true) {
+                frameCallbackRunning = false
+                return
+            }
+            choreographer.postFrameCallback(this)
+            if (alpha == 0f) return
             val currentPosition = instance?.currentPosition
             val position = CalculationUtils.convertDurationToTimeStamp(currentPosition ?: 0)
             val duration = instance?.currentMediaItem?.mediaMetadata?.extras?.getLong("Duration")
             if (duration != null && duration != 0L && !isUserTracking) {
-                bottomSheetFullSlider.valueTo = duration.toFloat()
+                bottomSheetFullSlider.valueTo = duration.toFloat().coerceAtLeast(1f)
                 bottomSheetFullSlider.value = instance?.currentPosition?.toFloat().checkIfNegativeOrNullOrMaxedOut(bottomSheetFullSlider.valueTo)
                 bottomSheetFullPosition.text = position
                 bottomSheetFullPositionBack.text = bottomSheetFullPosition.text
@@ -2508,11 +2579,6 @@ class FullBottomSheet @JvmOverloads constructor(
             }
             if (duration != null) {
                 updateLyric()
-            }
-            if (instance?.isPlaying == true) {
-                handler.postDelayed(this, SLIDER_UPDATE_INTERVAL)
-            } else {
-                runnableRunning = false
             }
         }
     }

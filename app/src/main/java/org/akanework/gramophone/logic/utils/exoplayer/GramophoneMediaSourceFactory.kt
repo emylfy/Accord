@@ -5,7 +5,6 @@ import androidx.annotation.OptIn
 import androidx.media3.common.Format
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaItem.SubtitleConfiguration
-import androidx.media3.common.util.Assertions
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.common.util.Util
 import androidx.media3.datasource.DataSource
@@ -108,9 +107,7 @@ class GramophoneMediaSourceFactory(
     @UnstableApi
     override fun setCmcdConfigurationFactory(cmcdConfigurationFactory: CmcdConfiguration.Factory): GramophoneMediaSourceFactory {
         delegateFactoryLoader.setCmcdConfigurationFactory(
-            Assertions.checkNotNull(
-                cmcdConfigurationFactory
-            )
+            requireNotNull(cmcdConfigurationFactory)
         )
         return this
     }
@@ -121,11 +118,9 @@ class GramophoneMediaSourceFactory(
 
     @UnstableApi
     override fun setLoadErrorHandlingPolicy(loadErrorHandlingPolicy: LoadErrorHandlingPolicy): GramophoneMediaSourceFactory {
-        this.loadErrorHandlingPolicy =
-            Assertions.checkNotNull(
-                loadErrorHandlingPolicy,
+        this.loadErrorHandlingPolicy = requireNotNull(loadErrorHandlingPolicy) {
                 "MediaSource.Factory#setLoadErrorHandlingPolicy no longer handles null by instantiating a new DefaultLoadErrorHandlingPolicy. Explicitly construct and pass an instance in order to retain the old behavior."
-            )
+            }
         delegateFactoryLoader.setLoadErrorHandlingPolicy(loadErrorHandlingPolicy)
         return this
     }
@@ -138,18 +133,16 @@ class GramophoneMediaSourceFactory(
     @UnstableApi
     override fun createMediaSource(inMediaItem: MediaItem): MediaSource {
         var mediaItem = inMediaItem
-        Assertions.checkNotNull(mediaItem.localConfiguration)
+        requireNotNull(mediaItem.localConfiguration)
         val scheme = mediaItem.localConfiguration!!.uri.scheme
         if (scheme != null && (scheme == "ssai")) {
-            return Assertions.checkNotNull(this.serverSideAdInsertionMediaSourceFactory)
+            return requireNotNull(this.serverSideAdInsertionMediaSourceFactory)
                 .createMediaSource(mediaItem)
         } else if ((mediaItem.localConfiguration!!.mimeType == "application/x-image-uri")) {
             return (ExternallyLoadedMediaSource.Factory(
                 Util.msToUs(
                     mediaItem.localConfiguration!!.imageDurationMs
-                ), Assertions.checkNotNull(
-                    this.externalImageLoader
-                )
+                ), requireNotNull(this.externalImageLoader)
             )).createMediaSource(mediaItem)
         } else {
             val type = Util.inferContentTypeForUriAndMimeType(
@@ -160,10 +153,9 @@ class GramophoneMediaSourceFactory(
             }
 
             val mediaSourceFactory = delegateFactoryLoader.getMediaSourceFactory(type)
-            Assertions.checkStateNotNull(
-                mediaSourceFactory,
+            checkNotNull(mediaSourceFactory) {
                 "No suitable media source factory found for content type: $type"
-            )
+            }
             val liveConfigurationBuilder = mediaItem.liveConfiguration.buildUpon()
             if (mediaItem.liveConfiguration.targetOffsetMs == -9223372036854775807L) {
                 liveConfigurationBuilder.setTargetOffsetMs(this.liveTargetOffsetMs)
@@ -342,9 +334,7 @@ class GramophoneMediaSourceFactory(
             } else {
                 var mediaSourceFactorySupplier: Supplier<MediaSource.Factory>? = null
                 val dataSourceFactory =
-                    Assertions.checkNotNull<DataSource.Factory?>(
-                        this.dataSourceFactory
-                    )
+                    requireNotNull(this.dataSourceFactory)
 
                 try {
                     val clazz: Class<*>

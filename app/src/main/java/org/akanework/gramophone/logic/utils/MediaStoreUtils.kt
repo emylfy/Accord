@@ -173,9 +173,6 @@ object MediaStoreUtils {
             }
     }
 
-    class ManuScript(songList: MutableList<MediaItem>) : Playlist(
-        -2, null, mutableListOf()
-    )
 
     enum class CarouselType {
         DAILY_SHUFFLE,
@@ -448,7 +445,7 @@ object MediaStoreUtils {
                 val path = it.getStringOrNull(pathColumn) ?: continue
                 val duration = it.getLongOrNull(durationColumn)
                 val pathFile = File(path)
-                val fldPath = pathFile.parentFile!!.absolutePath
+                val fldPath = pathFile.parentFile?.absolutePath ?: continue
                 val skip =
                     (duration != null && duration < limitValue * 1000) || folderFilter.contains(
                         fldPath
@@ -610,7 +607,9 @@ object MediaStoreUtils {
                 val fn = handleMediaFolder(path, root)
                 fn.addSong(song, albumId)
                 if (albumId != null) {
-                    coverCache?.putIfAbsentSupport(albumId, Pair(pathFile.parentFile!!, fn))
+                    pathFile.parentFile?.let { parent ->
+                        coverCache?.putIfAbsentSupport(albumId, Pair(parent, fn))
+                    }
                 }
                 handleShallowMediaItem(song, albumId, path, shallowRoot, folderArray)
                 folders.add(fldPath)
@@ -730,7 +729,6 @@ object MediaStoreUtils {
                 ).fetchRecommendList()
             }
             getPrivatePlaylist(libraryViewModel, context)
-            Log.d("TAG", "FINISHED BUILDING!")
             then?.let { it() }
         }
     }

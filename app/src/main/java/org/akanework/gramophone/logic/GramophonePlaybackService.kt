@@ -69,7 +69,9 @@ import coil3.imageLoader
 import coil3.request.ImageRequest
 import coil3.request.allowHardware
 import com.google.common.collect.ImmutableList
+import com.google.common.util.concurrent.FutureCallback
 import com.google.common.util.concurrent.Futures
+import com.google.common.util.concurrent.MoreExecutors
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import kotlinx.coroutines.CoroutineScope
@@ -134,21 +136,21 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
     private lateinit var prefs: SharedPreferences
 
     private fun getRepeatCommand() =
-        when (controller!!.repeatMode) {
+        when (controller?.repeatMode ?: Player.REPEAT_MODE_OFF) {
             Player.REPEAT_MODE_OFF -> customCommands[2]
             Player.REPEAT_MODE_ALL -> customCommands[3]
             Player.REPEAT_MODE_ONE -> customCommands[4]
-            else -> throw IllegalArgumentException()
+            else -> customCommands[2]
         }
 
     private fun getShufflingCommand() =
-        if (controller!!.shuffleModeEnabled)
+        if (controller?.shuffleModeEnabled == true)
             customCommands[1]
         else
             customCommands[0]
 
     private val timer: Runnable = Runnable {
-        controller!!.pause()
+        controller?.pause()
         timerDuration = 0
     }
 
@@ -338,31 +340,37 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
                     )
                 )
                 .build()
-        controller = MediaController.Builder(this, mediaSession!!.token).buildAsync().get()
-        handler.post {
-            if (mediaSession == null) return@post
-            lastPlayedManager.restore { items, factory ->
-                if (mediaSession == null) return@restore
-                applyShuffleSeed(true, factory.toFactory(controller!!))
-                if (items != null) {
-                    try {
-                        mediaSession?.player?.setMediaItems(
-                            items.mediaItems, items.startIndex, items.startPositionMs
-                        )
-                    } catch (e: IllegalSeekPositionException) {
-                        Log.e(TAG, "failed to restore: " + Log.getStackTraceString(e))
-                        // song was edited to be shorter and playback position doesn't exist anymore
-                    }
-                    // Prepare Player after UI thread is less busy (loads tracks, required for lyric)
-                    handler.post {
-                        controller?.prepare()
+        val controllerFuture = MediaController.Builder(this, mediaSession!!.token).buildAsync()
+        Futures.addCallback(controllerFuture, object : FutureCallback<MediaController> {
+            override fun onSuccess(result: MediaController) {
+                controller = result
+                onShuffleModeEnabledChanged(result.shuffleModeEnabled)
+                result.addListener(this@GramophonePlaybackService)
+                handler.post {
+                    if (mediaSession == null) return@post
+                    lastPlayedManager.restore { items, factory ->
+                        if (mediaSession == null) return@restore
+                        applyShuffleSeed(true, factory.toFactory(result))
+                        if (items != null) {
+                            try {
+                                mediaSession?.player?.setMediaItems(
+                                    items.mediaItems, items.startIndex, items.startPositionMs
+                                )
+                            } catch (e: IllegalSeekPositionException) {
+                                Log.e(TAG, "failed to restore: " + Log.getStackTraceString(e))
+                            }
+                            handler.post {
+                                controller?.prepare()
+                            }
+                        }
+                        lastPlayedManager.allowSavingState = true
                     }
                 }
-                lastPlayedManager.allowSavingState = true
             }
-        }
-        onShuffleModeEnabledChanged(controller!!.shuffleModeEnabled) // refresh custom commands
-        controller!!.addListener(this)
+            override fun onFailure(t: Throwable) {
+                Log.e(TAG, "Failed to build MediaController: " + Log.getStackTraceString(t))
+            }
+        }, MoreExecutors.directExecutor())
         registerReceiver(
             headSetReceiver,
             IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY)
@@ -539,7 +547,7 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
     }
 
     override fun onTracksChanged(tracks: Tracks) {
-        val mediaItem = controller!!.currentMediaItem
+        val mediaItem = controller?.currentMediaItem ?: return
         lyricsLock.runInBg {
             val trim = prefs.getBoolean("trim_lyrics", false)
             var lrc = loadAndParseLyricsFile(mediaItem?.getFile(), trim)
@@ -561,11 +569,14 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
             }
             CoroutineScope(Dispatchers.Main).launch {
                 mediaSession?.let {
-                    lyrics = lrc
-                    it.broadcastCustomCommand(
-                        SessionCommand(SERVICE_GET_LYRICS, Bundle.EMPTY),
-                        Bundle.EMPTY
-                    )
+                    // Don't overwrite if track changed while we were parsing
+                    if (controller?.currentMediaItem?.mediaId == mediaItem?.mediaId) {
+                        lyrics = lrc
+                        it.broadcastCustomCommand(
+                            SessionCommand(SERVICE_GET_LYRICS, Bundle.EMPTY),
+                            Bundle.EMPTY
+                        )
+                    }
                 }
             }.join()
         }
@@ -589,8 +600,9 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
             shuffleFactory == null && !events.contains(Player.EVENT_TIMELINE_CHANGED)
         ) {
             // when enabling shuffle, re-shuffle lists so that the first index is up to date
+            val count = controller?.mediaItemCount ?: return
             applyShuffleSeed(false) { c -> { CircularShuffleOrder(
-                it, c, controller!!.mediaItemCount, Random.nextLong()) } }
+                it, c, count, Random.nextLong()) } }
         }
     }
 

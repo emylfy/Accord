@@ -63,15 +63,26 @@ object LrcUtils {
         musicFile: File?,
         trim: Boolean
     ): MutableList<MediaStoreUtils.Lyric>? {
-        val lrcFile = musicFile?.let { File(it.parentFile, it.nameWithoutExtension + ".lrc") }
-        return loadLrcFile(lrcFile)?.let {
+        val parent = musicFile?.parentFile ?: return null
+        val baseName = musicFile.nameWithoutExtension
+        // Try .lrc first, then .srt
+        val lrcFile = File(parent, "$baseName.lrc")
+        loadLrcFile(lrcFile)?.let {
             try {
-                parseLrcString(it, trim)
+                return parseLrcString(it, trim)
             } catch (e: Exception) {
                 Log.e(TAG, Log.getStackTraceString(e))
-                null
             }
         }
+        val srtFile = File(parent, "$baseName.srt")
+        loadLrcFile(srtFile)?.let {
+            try {
+                return parseSrtString(it)
+            } catch (e: Exception) {
+                Log.e(TAG, Log.getStackTraceString(e))
+            }
+        }
+        return null
     }
 
     private fun loadLrcFile(lrcFile: File?): String? {
@@ -107,6 +118,19 @@ object LrcUtils {
         val labelRegex = "(?![\\d<])(\\d+|v\\d+|bg|F|M|D):(\\s?|.*:\\d)".toRegex()
         val labelRegexNumberOnly = "\\d+:\\s?".toRegex()
         val bgRegex = "\\[bg:\\s?(.*?)]".toRegex()
+        val metadataRegex = "\\[[a-zA-Z#]+:[^]]*]".toRegex()
+
+        // Multiline: merge lines without timestamps into the previous synced line
+        val rawLines = lrcContent.lines()
+        val mergedLines = mutableListOf<String>()
+        for (line in rawLines) {
+            if (timeMarksRegex.containsMatchIn(line) || metadataRegex.containsMatchIn(line) || mergedLines.isEmpty()) {
+                mergedLines.add(line)
+            } else if (line.isNotBlank()) {
+                mergedLines[mergedLines.lastIndex] = mergedLines.last() + "\n" + line
+            }
+        }
+
         val list = mutableListOf<MediaStoreUtils.Lyric>()
         var currentLabel: Label
         var currentTimeStamp = -1L
@@ -114,7 +138,7 @@ object LrcUtils {
         var firstLine = true
         var firstVoice: Int = -1
         // Add all lines found on LRC (probably will be unordered because of "compression" or translation type)
-        lrcContent.lines().forEach { line ->
+        mergedLines.forEach { line ->
             val label = labelRegex.find(
                 line.replace(timeMarksRegex, "")
                     .replace(wordTimeMarksRegex, "")
@@ -310,6 +334,28 @@ object LrcUtils {
             labelContent.startsWith("D:") -> Pair(Label.Duet, null)
             else -> Pair(Label.None, null)
         }
+    }
+
+    private fun parseSrtString(srtContent: String): MutableList<MediaStoreUtils.Lyric> {
+        val list = mutableListOf<MediaStoreUtils.Lyric>()
+        val timeRegex = "(\\d{2}):(\\d{2}):(\\d{2}),(\\d{3})".toRegex()
+        val blocks = srtContent.trim().split("\n\n", "\r\n\r\n")
+        for (block in blocks) {
+            val lines = block.trim().lines()
+            if (lines.size < 3) continue
+            val timeMatch = timeRegex.find(lines[1]) ?: continue
+            val hours = timeMatch.groupValues[1].toLong()
+            val minutes = timeMatch.groupValues[2].toLong()
+            val seconds = timeMatch.groupValues[3].toLong()
+            val millis = timeMatch.groupValues[4].toLong()
+            val timestamp = hours * 3600000 + minutes * 60000 + seconds * 1000 + millis
+            val content = lines.subList(2, lines.size).joinToString("\n")
+            list.add(MediaStoreUtils.Lyric(startTimestamp = timestamp, content = content))
+        }
+        if (list.isNotEmpty()) {
+            list.add(0, MediaStoreUtils.Lyric())
+        }
+        return list
     }
 
     private fun parseTime(timeString: String): Long {

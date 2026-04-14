@@ -23,6 +23,11 @@
 # Enable more agressive optimizations changing access of classes and methods
 -allowaccessmodification
 
+# reflection by media3 internals
+-keep class androidx.media3.common.util.Util {
+    public static void setForegroundServiceNotification(...);
+}
+
 -assumenosideeffects class android.util.Log {
     public static int v(...);
     public static int i(...);

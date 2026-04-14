@@ -34,6 +34,7 @@ import android.graphics.drawable.AnimatedVectorDrawable
 import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Build
+import android.util.Log
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -228,10 +229,12 @@ inline fun Float.spToPx(context: Context): Float =
     TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, this, context.resources.displayMetrics)
 
 fun MediaController.getTimer(): Int =
-    sendCustomCommand(
-        SessionCommand(SERVICE_QUERY_TIMER, Bundle.EMPTY),
-        Bundle.EMPTY
-    ).get().extras.getInt("duration")
+    try {
+        sendCustomCommand(
+            SessionCommand(SERVICE_QUERY_TIMER, Bundle.EMPTY),
+            Bundle.EMPTY
+        ).get(1, java.util.concurrent.TimeUnit.SECONDS).extras.getInt("duration")
+    } catch (e: Exception) { Log.w("MediaController", "getTimer failed", e); 0 }
 
 fun MediaController.hasTimer(): Boolean = getTimer() > 0
 fun MediaController.setTimer(value: Int) {
@@ -254,13 +257,25 @@ inline fun <reified T, reified U> HashMap<T, U>.putIfAbsentSupport(key: T, value
 
 @Suppress("UNCHECKED_CAST")
 fun MediaController.getLyrics(): MutableList<MediaStoreUtils.Lyric>? =
-    sendCustomCommand(
-        SessionCommand(SERVICE_GET_LYRICS, Bundle.EMPTY),
-        Bundle.EMPTY
-    ).get().extras.let {
-        (BundleCompat.getParcelableArray(it, "lyrics", MediaStoreUtils.Lyric::class.java)
-                as Array<MediaStoreUtils.Lyric>?)?.toMutableList()
-    }
+    try {
+        sendCustomCommand(
+            SessionCommand(SERVICE_GET_LYRICS, Bundle.EMPTY),
+            Bundle.EMPTY
+        ).get(2, java.util.concurrent.TimeUnit.SECONDS).extras.let {
+            (BundleCompat.getParcelableArray(it, "lyrics", MediaStoreUtils.Lyric::class.java)
+                    as Array<MediaStoreUtils.Lyric>?)?.toMutableList()
+        }
+    } catch (e: Exception) { Log.w("MediaController", "getLyrics failed", e); null }
+
+fun MediaController.getSessionId(): Int? =
+    try {
+        sendCustomCommand(
+            SessionCommand(SERVICE_GET_SESSION, Bundle.EMPTY),
+            Bundle.EMPTY
+        ).get(1, java.util.concurrent.TimeUnit.SECONDS).extras.getInt("session", C.AUDIO_SESSION_ID_UNSET).let {
+            if (it == C.AUDIO_SESSION_ID_UNSET) null else it
+        }
+    } catch (e: Exception) { Log.w("MediaController", "getSessionId failed", e); null }
 
 fun MediaController.getSessionId(): Int? =
     sendCustomCommand(
@@ -628,7 +643,7 @@ fun MaterialToolbar.applyGeneralMenuItem(
                     snackBar.setActionTextColor(
                         MaterialColors.getColor(
                             snackBar.view,
-                            com.google.android.material.R.attr.colorPrimary,
+                            androidx.appcompat.R.attr.colorPrimary,
                         ),
                     )
                     snackBar.setTextColor(

@@ -36,6 +36,7 @@ class GramophoneRenderFactory(context: Context) : DefaultRenderersFactory(contex
 		// empty
 	}
 
+	@Deprecated("Deprecated in media3", ReplaceWith(""))
 	override fun buildImageRenderers(out: java.util.ArrayList<Renderer>) {
 		// empty
 	}
