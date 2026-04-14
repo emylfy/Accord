@@ -48,6 +48,10 @@
     <string name="go_to_album">Go to album</string>
     <string name="go_to_artist">Go to artist</string>
     <string name="details">Details</string>
+    <string name="share">Share</string>
+    <string name="fork_maintainer_label">Fork maintainer</string>
+    <string name="fork_maintainer">emylfy</string>
+    <string name="fork_tag" translatable="false">@emylfy</string>
     <string name="shuffle">Shuffle</string>
     <string name="repeat_mode">Repeat mode</string>
     <string name="unknown_playlist">Unknown playlist</string>
@@ -232,6 +236,10 @@
     <string name="lib3_desc" translatable="false">https://github.com/Helixform/FluidRecyclerView</string>
     <string name="lib4" translatable="false">AndroidFastScroll</string>
     <string name="lib4_desc" translatable="false">https://github.com/zhanghai/AndroidFastScroll</string>
+    <string name="animation_fps">Animation refresh rate</string>
+    <string name="tab_order">Tab order</string>
+    <string name="tab_order_summary">Reorder or hide library tabs</string>
+    <string name="divider">Divider</string>
     <string name="blur_lyrics">Blur lyrics</string>
     <string name="blur_lyrics_summary">Enable blur with lyrics (May impact performance)</string>
 </resources>
