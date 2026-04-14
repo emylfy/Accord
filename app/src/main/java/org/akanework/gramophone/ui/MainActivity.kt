@@ -256,11 +256,14 @@ class MainActivity : AppCompatActivity() {
      * @param frag: Target fragment.
      */
     fun startFragment(frag: Fragment, args: (Bundle.() -> Unit)? = null) {
-        bottomNavigationView.animate()
-            .translationY(bottomNavigationView.height.toFloat())
-            .alpha(0f)
-            .setDuration(250)
-            .start()
+        val previousCount = supportFragmentManager.backStackEntryCount
+        bottomNavigationView.post {
+            bottomNavigationView.animate()
+                .translationY(bottomNavigationView.height.toFloat())
+                .alpha(0f)
+                .setDuration(250)
+                .start()
+        }
         supportFragmentManager
             .beginTransaction()
             .addToBackStack(System.currentTimeMillis().toString())
@@ -270,7 +273,7 @@ class MainActivity : AppCompatActivity() {
         supportFragmentManager.addOnBackStackChangedListener(object :
             androidx.fragment.app.FragmentManager.OnBackStackChangedListener {
             override fun onBackStackChanged() {
-                if (supportFragmentManager.backStackEntryCount == 0) {
+                if (supportFragmentManager.backStackEntryCount <= previousCount) {
                     bottomNavigationView.animate()
                         .translationY(0f)
                         .alpha(1f)

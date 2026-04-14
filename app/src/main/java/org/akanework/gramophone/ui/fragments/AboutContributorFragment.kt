@@ -39,15 +39,16 @@ class AboutContributorFragment : BaseElevatedFragment(null) {
         rootView.findViewById<View>(R.id.ack2_frame).setOnClickListener { openUrl("https://github.com/NurKeinNeid") }
         rootView.findViewById<View>(R.id.ack3_frame).setOnClickListener { openUrl("https://github.com/nabpeepol") }
 
-        // Libraries → URLs from strings
+        // Libraries → GitHub repos
         val libs = listOf(
-            R.string.lib1_desc, R.string.lib2_desc, R.string.lib3_desc, R.string.lib4_desc
+            R.id.lib1_frame to R.string.lib1_desc,
+            R.id.lib2_frame to R.string.lib2_desc,
+            R.id.lib3_frame to R.string.lib3_desc,
+            R.id.lib4_frame to R.string.lib4_desc
         )
-        val sourceFrame = rootView.findViewById<ViewGroup>(R.id.source_frame)
-        val linearLayout = sourceFrame.getChildAt(0) as ViewGroup
-        for (i in libs.indices) {
-            linearLayout.getChildAt(i)?.setOnClickListener {
-                openUrl(getString(libs[i]))
+        for ((frameId, urlRes) in libs) {
+            rootView.findViewById<View>(frameId).setOnClickListener {
+                openUrl(getString(urlRes))
             }
         }
 

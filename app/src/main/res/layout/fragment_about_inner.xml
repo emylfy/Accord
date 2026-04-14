@@ -253,6 +253,7 @@
                     android:orientation="vertical">
 
                     <FrameLayout
+                        android:id="@+id/lib1_frame"
                         android:layout_width="match_parent"
                         android:layout_height="58dp"
                         android:background="?selectableItemBackground"
@@ -298,6 +299,7 @@
                     </FrameLayout>
 
                     <FrameLayout
+                        android:id="@+id/lib2_frame"
                         android:layout_width="match_parent"
                         android:layout_height="58dp"
                         android:background="?selectableItemBackground"
@@ -343,6 +345,7 @@
                     </FrameLayout>
 
                     <FrameLayout
+                        android:id="@+id/lib3_frame"
                         android:layout_width="match_parent"
                         android:layout_height="58dp"
                         android:background="?selectableItemBackground"
@@ -388,6 +391,7 @@
                     </FrameLayout>
 
                     <FrameLayout
+                        android:id="@+id/lib4_frame"
                         android:layout_width="match_parent"
                         android:layout_height="58dp"
                         android:background="?selectableItemBackground"
