@@ -20,7 +20,9 @@ package org.akanework.gramophone.ui.fragments.settings
 import android.content.SharedPreferences
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.preference.Preference
 import org.akanework.gramophone.R
+import org.akanework.gramophone.ui.components.TabOrderPreference
 import org.akanework.gramophone.ui.fragments.BasePreferenceFragment
 import org.akanework.gramophone.ui.fragments.BaseSettingFragment
 
@@ -30,6 +32,16 @@ class AppearanceSettingsFragment : BaseSettingFragment(R.string.settings_categor
 class AppearanceSettingsTopFragment : BasePreferenceFragment() {
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
         setPreferencesFromResource(R.xml.settings_appearance, rootKey)
+    }
+
+    override fun onDisplayPreferenceDialog(preference: Preference) {
+        if (preference is TabOrderPreference) {
+            val f = TabOrderPreference.TabOrderDialog.newInstance(preference.key)
+            f.setTargetFragment(this, 0)
+            f.show(parentFragmentManager, "tab_order")
+        } else {
+            super.onDisplayPreferenceDialog(preference)
+        }
     }
 
     override fun onSharedPreferenceChanged(sharedPreferences: SharedPreferences?, key: String?) {

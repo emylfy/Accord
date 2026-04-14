@@ -32,6 +32,15 @@
             app:iconSpaceReserved="false"
             app:useSimpleSummaryProvider="true" />
 
+        <org.akanework.gramophone.ui.components.TabOrderPreference
+            android:defaultValue=""
+            android:dialogTitle="@string/tab_order"
+            android:key="tabs"
+            android:layout="@layout/preference_dropdown_md"
+            android:summary="@string/tab_order_summary"
+            android:title="@string/tab_order"
+            app:iconSpaceReserved="false" />
+
     </PreferenceCategory>
 
 </PreferenceScreen>

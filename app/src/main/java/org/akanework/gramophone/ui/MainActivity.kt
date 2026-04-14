@@ -292,4 +292,22 @@ class MainActivity : AppCompatActivity() {
     fun consumeAutoPlay(): Boolean {
         return autoPlay.also { autoPlay = false }
     }
+
+    override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
+        val player = getPlayer()
+        if (player != null && player.mediaItemCount > 0 &&
+            (event.keyCode == android.view.KeyEvent.KEYCODE_VOLUME_UP ||
+             event.keyCode == android.view.KeyEvent.KEYCODE_VOLUME_DOWN)) {
+            val audioManager = getSystemService(android.media.AudioManager::class.java)
+            val direction = if (event.keyCode == android.view.KeyEvent.KEYCODE_VOLUME_UP)
+                android.media.AudioManager.ADJUST_RAISE else android.media.AudioManager.ADJUST_LOWER
+            if (event.action == android.view.KeyEvent.ACTION_DOWN) {
+                audioManager.adjustStreamVolume(
+                    android.media.AudioManager.STREAM_MUSIC, direction, 0
+                )
+            }
+            return true
+        }
+        return super.dispatchKeyEvent(event)
+    }
 }

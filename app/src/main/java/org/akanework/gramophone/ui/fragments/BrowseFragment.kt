@@ -1,20 +1,3 @@
-/*
- *     Copyright (C) 2024 Akane Foundation
- *
- *     Gramophone is free software: you can redistribute it and/or modify
- *     it under the terms of the GNU General Public License as published by
- *     the Free Software Foundation, either version 3 of the License, or
- *     (at your option) any later version.
- *
- *     Gramophone is distributed in the hope that it will be useful,
- *     but WITHOUT ANY WARRANTY; without even the implied warranty of
- *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *     GNU General Public License for more details.
- *
- *     You should have received a copy of the GNU General Public License
- *     along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
-
 package org.akanework.gramophone.ui.fragments
 
 import android.annotation.SuppressLint
@@ -29,20 +12,12 @@ import androidx.viewpager2.widget.ViewPager2
 import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.tabs.TabLayout
-import com.google.android.material.tabs.TabLayoutMediator
 import org.akanework.gramophone.R
 import org.akanework.gramophone.logic.applyGeneralMenuItem
 import org.akanework.gramophone.logic.enableEdgeToEdgePaddingListener
 import org.akanework.gramophone.ui.LibraryViewModel
 import org.akanework.gramophone.ui.adapters.ViewPager2Adapter
 
-/**
- * ViewPagerFragment:
- *   A fragment that's in charge of displaying tabs
- * and is connected to the drawer.
- *
- * @author AkaneTan
- */
 @androidx.annotation.OptIn(UnstableApi::class)
 class BrowseFragment : BaseFragment(null) {
     private val libraryViewModel: LibraryViewModel by activityViewModels()
@@ -72,32 +47,18 @@ class BrowseFragment : BaseFragment(null) {
 
         topAppBar.applyGeneralMenuItem(this, libraryViewModel)
 
-        // Connect ViewPager2.
-
-        // Set this to 9999 so it won't lag anymore.
         viewPager2.offscreenPageLimit = 9999
-        val adapter = ViewPager2Adapter(childFragmentManager, viewLifecycleOwner.lifecycle)
+        val adapter = ViewPager2Adapter(
+            childFragmentManager, viewLifecycleOwner.lifecycle,
+            requireContext(), viewPager2, tabLayout
+        )
         viewPager2.adapter = adapter
-        TabLayoutMediator(
-            tabLayout,
-            viewPager2
-        ) { tab, position ->
-            tab.text = getString(adapter.getLabelResId(position))
-        }.attach()
+        adapter.attachMediator()
 
-        /*
-         * Add margin to last and first tab.
-         * There's no attribute to let you set margin
-         * to the last tab.
-         */
-        val lastTab = tabLayout.getTabAt(tabLayout.tabCount - 1)!!.view
-        val firstTab = tabLayout.getTabAt(0)!!.view
-        val lastParam = lastTab.layoutParams as ViewGroup.MarginLayoutParams
-        val firstParam = firstTab.layoutParams as ViewGroup.MarginLayoutParams
-        lastParam.marginEnd = resources.getDimension(R.dimen.tab_layout_content_padding).toInt()
-        firstParam.marginStart = resources.getDimension(R.dimen.tab_layout_content_padding).toInt()
-        lastTab.layoutParams = lastParam
-        firstTab.layoutParams = firstParam
+        if (adapter.itemCount < 2) {
+            tabLayout.visibility = View.GONE
+            viewPager2.isUserInputEnabled = false
+        }
 
         return rootView
     }

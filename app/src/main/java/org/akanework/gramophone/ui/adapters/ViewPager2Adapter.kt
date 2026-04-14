@@ -1,70 +1,132 @@
-/*
- *     Copyright (C) 2024 Akane Foundation
- *
- *     Gramophone is free software: you can redistribute it and/or modify
- *     it under the terms of the GNU General Public License as published by
- *     the Free Software Foundation, either version 3 of the License, or
- *     (at your option) any later version.
- *
- *     Gramophone is distributed in the hope that it will be useful,
- *     but WITHOUT ANY WARRANTY; without even the implied warranty of
- *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *     GNU General Public License for more details.
- *
- *     You should have received a copy of the GNU General Public License
- *     along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
-
 package org.akanework.gramophone.ui.adapters
 
+import android.annotation.SuppressLint
+import android.content.Context
+import android.content.SharedPreferences
 import android.os.Bundle
+import android.view.View
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
+import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleOwner
+import androidx.preference.PreferenceManager
 import androidx.viewpager2.adapter.FragmentStateAdapter
+import androidx.viewpager2.widget.ViewPager2
+import com.google.android.material.tabs.TabLayout
+import com.google.android.material.tabs.TabLayoutMediator
 import org.akanework.gramophone.R
 import org.akanework.gramophone.ui.fragments.AdapterFragment
 
-/**
- * This is the ViewPager2 adapter.
- */
 class ViewPager2Adapter(
     fragmentManager: FragmentManager,
     lifecycle: Lifecycle,
-) : FragmentStateAdapter(fragmentManager, lifecycle) {
+    private val context: Context,
+    private val viewPager2: ViewPager2,
+    private val tabLayout: TabLayout?
+) : FragmentStateAdapter(fragmentManager, lifecycle),
+    SharedPreferences.OnSharedPreferenceChangeListener, DefaultLifecycleObserver {
 
-    companion object {
-        val tabs: ArrayList</* res id */ Int> = arrayListOf(
-            R.id.songs,
-            R.id.albums,
-            R.id.artists,
-            R.id.genres,
-            R.id.dates,
-            R.id.folders,
-            R.id.detailed_folders,
-            R.id.playlists,
-        )
+    private val prefs = PreferenceManager.getDefaultSharedPreferences(context.applicationContext)
+    private var tabs = mapSettingToTabList(prefs.getString("tabs", "") ?: "")
+    private var mediator: TabLayoutMediator? = null
+
+    init {
+        prefs.registerOnSharedPreferenceChangeListener(this)
+        lifecycle.addObserver(this)
     }
 
-    fun getLabelResId(position: Int): Int =
-        when (tabs[position]) {
-            R.id.songs -> R.string.category_songs
-            R.id.albums -> R.string.category_albums
-            R.id.artists -> R.string.category_artists
-            R.id.genres -> R.string.category_genres
-            R.id.dates -> R.string.category_dates
-            R.id.folders -> R.string.filesystem
-            R.id.detailed_folders -> R.string.folders
-            R.id.playlists -> R.string.category_playlists
-            else -> throw IllegalArgumentException("Invalid position: $position")
+    override fun onDestroy(owner: LifecycleOwner) {
+        prefs.unregisterOnSharedPreferenceChangeListener(this)
+    }
+
+    fun attachMediator() {
+        mediator?.detach()
+        tabLayout?.let { tl ->
+            mediator = TabLayoutMediator(tl, viewPager2) { tab, position ->
+                tab.text = context.getString(getLabelResId(position))
+            }.also { it.attach() }
+        }
+    }
+
+    @SuppressLint("NotifyDataSetChanged")
+    override fun onSharedPreferenceChanged(sharedPreferences: SharedPreferences?, key: String?) {
+        if (key != "tabs") return
+        val currentItemId = tabs.getOrNull(viewPager2.currentItem)
+        tabs = mapSettingToTabList(prefs.getString("tabs", "") ?: "")
+        notifyDataSetChanged()
+        attachMediator()
+        if (currentItemId != null && tabs.contains(currentItemId)) {
+            val newPosition = tabs.indexOfFirst { it == currentItemId }
+            viewPager2.setCurrentItem(newPosition, false)
         }
 
-    override fun getItemCount(): Int = tabs.count()
+        if (getItemCount() < 2) {
+            tabLayout?.visibility = View.GONE
+            viewPager2.isUserInputEnabled = false
+        } else {
+            tabLayout?.visibility = View.VISIBLE
+            viewPager2.isUserInputEnabled = true
+        }
+    }
+
+    fun getLabelResId(position: Int) = tabs[position]!!.label
+
+    override fun getItemCount() = tabs.indexOf(null)
+        .also { if (it == -1) throw IllegalStateException("indexOf null is -1 in tab list?") }
 
     override fun createFragment(position: Int): Fragment =
         AdapterFragment().apply {
             arguments = Bundle().apply {
-                putInt("ID", tabs[position])
+                putInt("ID", tabs[position]!!.id)
             }
         }
+
+    override fun getItemId(position: Int): Long {
+        return tabs[position]!!.id.toLong()
+    }
+
+    override fun containsItem(itemId: Long): Boolean {
+        return tabs.any { it?.id?.toLong() == itemId }
+    }
+
+    companion object {
+        // Do not rename entries here, names are written to disk. Order is default tab order
+        enum class Tab(val id: Int, val label: Int) {
+            Songs(R.id.songs, R.string.category_songs),
+            Albums(R.id.albums, R.string.category_albums),
+            Artists(R.id.artists, R.string.category_artists),
+            Genres(R.id.genres, R.string.category_genres),
+            Dates(R.id.dates, R.string.category_dates),
+            Folders(R.id.folders, R.string.filesystem),
+            FileSystem(R.id.detailed_folders, R.string.folders),
+            Playlist(R.id.playlists, R.string.category_playlists)
+        }
+
+        fun mapSettingToTabList(setting: String): List<Tab?> {
+            val stList = if (setting.isNotEmpty())
+                setting.split(",").flatMap {
+                    if (it.isEmpty())
+                        listOf(null)
+                    else
+                        try {
+                            listOf(Tab.valueOf(it))
+                        } catch (_: IllegalArgumentException) {
+                            listOf()
+                        }
+                }.toMutableList()
+            else mutableListOf()
+            Tab.entries.forEach {
+                if (stList.indexOf(it) != stList.lastIndexOf(it))
+                    stList.removeAll { i -> i == it }
+                if (!stList.contains(it))
+                    stList.add(it)
+            }
+            if (!stList.contains(null))
+                stList.add(null)
+            return stList
+        }
+
+        fun mapTabListToSetting(tabList: List<Tab?>) = tabList.joinToString(",") { it?.name ?: "" }
+    }
 }
