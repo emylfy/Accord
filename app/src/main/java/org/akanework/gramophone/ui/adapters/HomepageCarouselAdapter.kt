@@ -13,7 +13,8 @@ import org.akanework.gramophone.logic.resourceUri
 import org.akanework.gramophone.logic.utils.MediaStoreUtils
 
 class HomepageCarouselAdapter(
-    context: Context
+    context: Context,
+    private val onItemClick: ((Int) -> Unit)? = null
 ) : RecyclerView.Adapter<HomepageCarouselAdapter.ViewHolder>() {
 
     val carouselList = mutableListOf(
@@ -62,5 +63,8 @@ class HomepageCarouselAdapter(
         holder.coverImageView.setImageURI(carouselList[position].cover)
         holder.bannerImageView.setImageURI(carouselList[position].banner)
         holder.hintTextView.text = carouselList[position].hint
+        holder.itemView.setOnClickListener {
+            onItemClick?.invoke(position)
+        }
     }
 }

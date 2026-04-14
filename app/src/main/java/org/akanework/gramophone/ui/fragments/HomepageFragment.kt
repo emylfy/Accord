@@ -64,7 +64,16 @@ class HomepageFragment : BaseFragment(null), Observer<RecommendationFactory.Reco
         nestedScrollView.enableEdgeToEdgePaddingListener()
 
         recyclerView.layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
-        recyclerView.adapter = HomepageCarouselAdapter(requireContext())
+        recyclerView.adapter = HomepageCarouselAdapter(requireContext()) { _ ->
+            val songs = libraryViewModel.mediaItemList.value
+            val player = (requireActivity() as MainActivity).getPlayer()
+            if (!songs.isNullOrEmpty() && player != null) {
+                player.shuffleModeEnabled = true
+                player.setMediaItems(songs, 0, 0)
+                player.prepare()
+                player.play()
+            }
+        }
 
         recommendRecyclerView.layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
         recommendRecyclerView.adapter = recommendAdapter

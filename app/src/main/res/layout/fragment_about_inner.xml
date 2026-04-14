@@ -89,6 +89,7 @@
                     android:orientation="vertical">
 
                     <FrameLayout
+                        android:id="@+id/ack1_frame"
                         android:layout_width="match_parent"
                         android:layout_height="58dp"
                         android:background="?selectableItemBackground"
@@ -133,6 +134,7 @@
                     </FrameLayout>
 
                     <FrameLayout
+                        android:id="@+id/ack2_frame"
                         android:layout_width="match_parent"
                         android:layout_height="58dp"
                         android:background="?selectableItemBackground"
@@ -177,6 +179,7 @@
                     </FrameLayout>
 
                     <FrameLayout
+                        android:id="@+id/ack3_frame"
                         android:layout_width="match_parent"
                         android:layout_height="58dp"
                         android:background="?selectableItemBackground"

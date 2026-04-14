@@ -24,6 +24,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.view.Choreographer
+import android.view.View
 import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.IntentSenderRequest
@@ -255,12 +256,30 @@ class MainActivity : AppCompatActivity() {
      * @param frag: Target fragment.
      */
     fun startFragment(frag: Fragment, args: (Bundle.() -> Unit)? = null) {
+        bottomNavigationView.animate()
+            .translationY(bottomNavigationView.height.toFloat())
+            .alpha(0f)
+            .setDuration(250)
+            .start()
         supportFragmentManager
             .beginTransaction()
             .addToBackStack(System.currentTimeMillis().toString())
             .hide(supportFragmentManager.fragments.let { it[it.size - 1] })
             .add(R.id.container, frag.apply { args?.let { arguments = Bundle().apply(it) } })
             .commit()
+        supportFragmentManager.addOnBackStackChangedListener(object :
+            androidx.fragment.app.FragmentManager.OnBackStackChangedListener {
+            override fun onBackStackChanged() {
+                if (supportFragmentManager.backStackEntryCount == 0) {
+                    bottomNavigationView.animate()
+                        .translationY(0f)
+                        .alpha(1f)
+                        .setDuration(250)
+                        .start()
+                    supportFragmentManager.removeOnBackStackChangedListener(this)
+                }
+            }
+        })
     }
 
     @OptIn(UnstableApi::class)

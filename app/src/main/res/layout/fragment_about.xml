@@ -326,6 +326,8 @@
                 android:layout_marginStart="24dp"
                 android:layout_marginTop="8dp"
                 android:layout_marginEnd="24dp"
+                android:clickable="false"
+                android:focusable="false"
                 app:cardBackgroundColor="@color/contrast_cardBackground"
                 app:cardCornerRadius="12dp"
                 app:layout_constraintEnd_toEndOf="parent"
@@ -339,6 +341,7 @@
                     android:orientation="vertical">
 
                     <FrameLayout
+                        android:id="@+id/lazar_frame"
                         android:layout_width="match_parent"
                         android:layout_height="58dp"
                         android:background="?selectableItemBackground"
@@ -394,6 +397,7 @@
                     </FrameLayout>
 
                     <FrameLayout
+                        android:id="@+id/nick_frame"
                         android:layout_width="match_parent"
                         android:layout_height="58dp"
                         android:background="?selectableItemBackground"
@@ -449,6 +453,7 @@
                     </FrameLayout>
 
                     <FrameLayout
+                        android:id="@+id/skyd_frame"
                         android:layout_width="match_parent"
                         android:layout_height="58dp"
                         android:background="?selectableItemBackground"
@@ -504,6 +509,7 @@
                     </FrameLayout>
 
                     <FrameLayout
+                        android:id="@+id/luka_frame"
                         android:layout_width="match_parent"
                         android:layout_height="58dp"
                         android:background="?selectableItemBackground"
@@ -581,6 +587,7 @@
                 app:strokeWidth="0dp">
 
                 <FrameLayout
+                    android:id="@+id/fork_inner"
                     android:layout_width="match_parent"
                     android:layout_height="58dp"
                     android:background="?selectableItemBackground"

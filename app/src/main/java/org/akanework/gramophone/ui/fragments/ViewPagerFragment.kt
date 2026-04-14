@@ -22,8 +22,10 @@ class ViewPagerFragment : BaseFragment(true) {
         mViewPager2.adapter = adapter
         mViewPager2.isUserInputEnabled = false
         mViewPager2.offscreenPageLimit = 9999
+        mViewPager2.setCurrentItem(1, false) // Start on Browse
 
         val bottomNavigationView = (requireActivity() as MainActivity).bottomNavigationView
+        bottomNavigationView.selectedItemId = R.id.browse
 
         // Set up bottomNavigationView
         bottomNavigationView.setOnItemSelectedListener {

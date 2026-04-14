@@ -38,15 +38,26 @@ class AboutFragment : BaseElevatedFragment(null) {
             requireActivity().supportFragmentManager.popBackStack()
         }
 
-        fun openGitHub(username: String) {
-            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/$username")))
+        fun openUrl(url: String) {
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
         }
 
-        rootView.findViewById<View>(R.id.akane_cv).setOnClickListener { openGitHub("AkaneTan") }
-        rootView.findViewById<View>(R.id.lightsummer_cv).setOnClickListener { openGitHub("lightsummer233") }
-        rootView.findViewById<View>(R.id.duo3_cv).setOnClickListener { openGitHub("123Duo3") }
-        rootView.findViewById<View>(R.id.fork_card).setOnClickListener { openGitHub("emylfy") }
-
+        // Accord repo
+        rootView.findViewById<View>(R.id.info_card).setOnClickListener {
+            openUrl("https://github.com/emylfy/AccordLegacy")
+        }
+        // Main developers
+        rootView.findViewById<View>(R.id.akane_cv).setOnClickListener { openUrl("https://github.com/AkaneTan") }
+        rootView.findViewById<View>(R.id.lightsummer_cv).setOnClickListener { openUrl("https://github.com/lightsummer233") }
+        rootView.findViewById<View>(R.id.duo3_cv).setOnClickListener { openUrl("https://github.com/123Duo3") }
+        // Side developers
+        rootView.findViewById<View>(R.id.lazar_frame).setOnClickListener { openUrl("https://github.com/lazrdev") }
+        rootView.findViewById<View>(R.id.nick_frame).setOnClickListener { openUrl("https://github.com/nift4") }
+        rootView.findViewById<View>(R.id.skyd_frame).setOnClickListener { openUrl("https://github.com/SkyD666") }
+        rootView.findViewById<View>(R.id.luka_frame).setOnClickListener { openUrl("https://github.com/LukaLanczos") }
+        // Fork maintainer
+        rootView.findViewById<View>(R.id.fork_inner).setOnClickListener { openUrl("https://github.com/emylfy") }
+        // Contributors
         contributorCardView.setOnClickListener {
             val supportFragmentManager = requireActivity().supportFragmentManager
             supportFragmentManager

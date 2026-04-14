@@ -100,9 +100,10 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.akanework.gramophone.R
+import org.akanework.gramophone.ui.fragments.ArtistSubFragment
 import org.akanework.gramophone.ui.fragments.BaseWrapperFragment
 import org.akanework.gramophone.ui.fragments.BrowseFragment
-import org.akanework.gramophone.ui.fragments.DetailDialogFragment
+import org.akanework.gramophone.ui.fragments.GeneralSubFragment
 import org.akanework.gramophone.logic.GramophonePlaybackService
 import org.akanework.gramophone.logic.animateText
 import org.akanework.gramophone.logic.checkIfNegativeOrNullOrMaxedOut
@@ -790,31 +791,40 @@ class FullBottomSheet @JvmOverloads constructor(
         val moreClickListener = View.OnClickListener { view ->
             view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
             val items = arrayOf(
-                context.getString(R.string.details),
+                context.getString(R.string.go_to_artist),
+                context.getString(R.string.go_to_album),
                 context.getString(R.string.share)
             )
             MaterialAlertDialogBuilder(wrappedContext ?: context)
                 .setItems(items) { _, which ->
+                    val mediaItem = instance?.currentMediaItem ?: return@setItems
                     when (which) {
                         0 -> {
-                            val mediaItem = instance?.currentMediaItem ?: return@setItems
-                            val position = activity.libraryViewModel.mediaItemList.value
-                                ?.indexOfFirst { it.mediaId == mediaItem.mediaId } ?: -1
-                            if (position >= 0) {
-                                val browseFragment = activity.supportFragmentManager
-                                    .fragments.firstNotNullOfOrNull {
-                                        it.childFragmentManager.fragments.filterIsInstance<BrowseFragment>().firstOrNull()
-                                    }
-                                val wrapper = browseFragment?.childFragmentManager?.fragments
-                                    ?.filterIsInstance<BaseWrapperFragment>()?.firstOrNull()
-                                wrapper?.replaceFragment(DetailDialogFragment()) {
-                                    putInt("Position", position)
+                            val pos = activity.libraryViewModel.artistItemList.value?.indexOfFirst {
+                                it.title == mediaItem.mediaMetadata.artist && it.songList.any { s -> s.mediaId == mediaItem.mediaId }
+                            } ?: -1
+                            if (pos >= 0) {
+                                minimize?.invoke()
+                                activity.startFragment(ArtistSubFragment()) {
+                                    putInt("Position", pos)
+                                    putInt("Item", R.id.artist)
                                 }
                             }
                         }
                         1 -> {
-                            val mediaItem = instance?.currentMediaItem
-                            val mediaId = mediaItem?.mediaId?.toLongOrNull()
+                            val pos = activity.libraryViewModel.albumItemList.value?.indexOfFirst {
+                                it.title == mediaItem.mediaMetadata.albumTitle && it.songList.any { s -> s.mediaId == mediaItem.mediaId }
+                            } ?: -1
+                            if (pos >= 0) {
+                                minimize?.invoke()
+                                activity.startFragment(GeneralSubFragment()) {
+                                    putInt("Position", pos)
+                                    putInt("Item", R.id.album)
+                                }
+                            }
+                        }
+                        2 -> {
+                            val mediaId = mediaItem.mediaId?.toLongOrNull()
                             if (mediaId != null) {
                                 val uri = android.content.ContentUris.withAppendedId(
                                     android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, mediaId

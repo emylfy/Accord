@@ -1,5 +1,7 @@
 package org.akanework.gramophone.ui.fragments
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -26,6 +28,27 @@ class AboutContributorFragment : BaseElevatedFragment(null) {
 
         materialToolbar.setNavigationOnClickListener {
             requireActivity().supportFragmentManager.popBackStack()
+        }
+
+        fun openUrl(url: String) {
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+        }
+
+        // Acknowledgements → GitHub profiles
+        rootView.findViewById<View>(R.id.ack1_frame).setOnClickListener { openUrl("https://github.com/maximiliaan") }
+        rootView.findViewById<View>(R.id.ack2_frame).setOnClickListener { openUrl("https://github.com/NurKeinNeid") }
+        rootView.findViewById<View>(R.id.ack3_frame).setOnClickListener { openUrl("https://github.com/nabpeepol") }
+
+        // Libraries → URLs from strings
+        val libs = listOf(
+            R.string.lib1_desc, R.string.lib2_desc, R.string.lib3_desc, R.string.lib4_desc
+        )
+        val sourceFrame = rootView.findViewById<ViewGroup>(R.id.source_frame)
+        val linearLayout = sourceFrame.getChildAt(0) as ViewGroup
+        for (i in libs.indices) {
+            linearLayout.getChildAt(i)?.setOnClickListener {
+                openUrl(getString(libs[i]))
+            }
         }
 
         return rootView
