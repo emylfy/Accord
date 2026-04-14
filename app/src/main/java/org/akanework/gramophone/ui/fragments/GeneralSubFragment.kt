@@ -18,7 +18,6 @@
 package org.akanework.gramophone.ui.fragments
 
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -171,7 +170,6 @@ class GeneralSubFragment : BaseFragment(true) {
         recyclerView.fastScroll(songAdapter, songAdapter.itemHeightHelper)
 
         topAppBar.setNavigationOnClickListener {
-            Log.d("TAG", "ok${requireParentFragment().childFragmentManager.fragments.size}")
             (requireParentFragment() as BaseWrapperFragment).childFragmentManager.popBackStack()
         }
 

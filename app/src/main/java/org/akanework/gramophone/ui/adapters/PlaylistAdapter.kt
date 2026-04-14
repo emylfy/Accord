@@ -52,10 +52,6 @@ class PlaylistAdapter(
                     R.string.recently_added
                 }
 
-                is MediaStoreUtils.ManuScript -> {
-                    R.string.manuscript
-                }
-
                 else -> {
                     R.string.unknown_playlist
                 }

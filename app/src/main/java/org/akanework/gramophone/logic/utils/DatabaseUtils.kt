@@ -118,13 +118,6 @@ object DatabaseUtils {
         removeFromPlaylist(mediaItemId, libraryViewModel.privatePlaylistId, libraryViewModel, context)
     }
 
-    fun checkIfFavourite(
-        mediaItemId: Long,
-        libraryViewModel: LibraryViewModel
-    ) : Boolean {
-        return isFavourite(mediaItemId, libraryViewModel)
-    }
-
     fun isFavourite(
         mediaItemId: Long,
         libraryViewModel: LibraryViewModel

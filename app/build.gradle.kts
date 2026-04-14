@@ -2,7 +2,6 @@
 
 import com.android.build.gradle.tasks.PackageAndroidArtifact
 import org.jetbrains.kotlin.util.removeSuffixIfPresent
-import java.util.Properties
 
 plugins {
     id("com.android.application")
@@ -12,11 +11,6 @@ plugins {
 }
 
 android {
-    val releaseType = readProperties(file("../package.properties")).getProperty("releaseType")
-    if (releaseType.contains("\"")) {
-        throw IllegalArgumentException("releaseType must not contain \"")
-    }
-
     namespace = "org.akanework.gramophone"
     compileSdk = 36
     buildToolsVersion = "36.0.0"
@@ -58,19 +52,14 @@ android {
         // Bye bye android 12 - cuz blur
         minSdk = 31
         targetSdk = 36
-        versionCode = 18
-        versionName = "beta2"
+        versionCode = 19
+        versionName = "1.1.0"
         buildConfigField(
             "String",
             "MY_VERSION_NAME",
-            "\"Beta 2\""
+            "\"v1.1.0\""
         )
-        buildConfigField(
-            "String",
-            "RELEASE_TYPE",
-            "\"$releaseType\""
-        )
-        setProperty("archivesBaseName", "Accord-$versionName")
+        base.archivesName.set("Accord-$versionName")
     }
 
     signingConfigs {
@@ -103,17 +92,12 @@ android {
 
     buildTypes {
         release {
-            if (releaseType != "Profile") {
-                isMinifyEnabled = true
-                isShrinkResources = true
-                proguardFiles(
-                    getDefaultProguardFile("proguard-android-optimize.txt"),
-                    "proguard-rules.pro"
-                )
-            } else {
-                isMinifyEnabled = false
-                isProfileable = true
-            }
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
             if (project.hasProperty("AKANE_RELEASE_KEY_ALIAS")) {
                 signingConfig = signingConfigs["release"]
             }
@@ -170,34 +154,32 @@ configurations.configureEach {
 }
 
 dependencies {
-    val media3Version = "1.6.0-rc01"
-    val roomVersion = "2.7.0-rc02"
-
-    ksp("androidx.room:room-compiler:$roomVersion")
-    implementation("androidx.room:room-runtime:$roomVersion")
-    implementation("androidx.room:room-ktx:$roomVersion")
-    implementation("androidx.core:core-ktx:1.15.0")
-    implementation("androidx.activity:activity-ktx:1.10.1")
-    implementation("androidx.concurrent:concurrent-futures-ktx:1.2.0")
-    implementation("androidx.transition:transition-ktx:1.5.1") // <-- for predictive back
-    implementation("androidx.fragment:fragment-ktx:1.8.6")
-    implementation("androidx.core:core-splashscreen:1.2.0-beta01")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.9.0-alpha12")
-    implementation("androidx.appcompat:appcompat:1.7.0")
-    implementation("androidx.constraintlayout:constraintlayout:2.2.1")
-    implementation("androidx.media3:media3-exoplayer:$media3Version")
-    implementation("androidx.media3:media3-exoplayer-midi:$media3Version")
-    implementation("androidx.media3:media3-session:$media3Version")
-    implementation("androidx.preference:preference-ktx:1.2.1")
-    implementation("com.google.android.material:material:1.13.0-alpha11")
-    implementation("com.google.android.flexbox:flexbox:3.0.0")
-    implementation("me.zhanghai.android.fastscroll:library:1.3.0")
-    implementation("io.coil-kt.coil3:coil:3.1.0")
+    ksp(libs.room.compiler)
+    implementation(libs.room.runtime)
+    implementation(libs.room.ktx)
+    implementation(libs.core.ktx)
+    implementation(libs.activity.ktx)
+    implementation(libs.concurrent.futures.ktx)
+    implementation(libs.transition.ktx)
+    implementation(libs.fragment.ktx)
+    implementation(libs.splashscreen)
+    implementation(libs.lifecycle.viewmodel.ktx)
+    implementation(libs.appcompat)
+    implementation(libs.constraintlayout)
+    implementation(libs.media3.exoplayer)
+    implementation(libs.media3.exoplayer.midi)
+    implementation(libs.media3.session)
+    implementation(libs.preference.ktx)
+    implementation(libs.material)
+    implementation(libs.flexbox)
+    implementation(libs.fastscroll)
+    implementation(libs.coil)
+    implementation(libs.profileinstaller)
     implementation(files("../libs/lib-decoder-ffmpeg-release.aar"))
     implementation(projects.recyclerview)
     // --- below does not apply to release builds ---
-    debugImplementation("com.squareup.leakcanary:leakcanary-android:3.0-alpha-8")
-    testImplementation("junit:junit:4.13.2")
+    debugImplementation(libs.leakcanary)
+    testImplementation(libs.junit)
 }
 
 fun String.runCommand(
@@ -207,8 +189,3 @@ fun String.runCommand(
     commandLine(split(' '))
 }.standardOutput.asText.get().removeSuffixIfPresent("\n")
 
-fun readProperties(propertiesFile: File) = Properties().apply {
-    propertiesFile.inputStream().use { fis ->
-        load(fis)
-    }
-}

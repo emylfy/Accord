@@ -2,7 +2,6 @@ package org.akanework.gramophone.ui.fragments
 
 import android.content.Context
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -46,7 +45,6 @@ class BaseWrapperFragment : BaseFragment {
     }
 
     fun replaceFragment(frag: BaseFragment, args: (Bundle.() -> Unit)? = null) {
-        Log.d("TAG", "B4ADD, ${childFragmentManager.fragments.size}")
         childFragmentManager.beginTransaction()
             .addToBackStack(System.currentTimeMillis().toString())
             .hide(childFragmentManager.fragments.let { it[it.size - 1] })
@@ -55,7 +53,6 @@ class BaseWrapperFragment : BaseFragment {
                 frag.apply { args?.let { arguments = Bundle().apply(it) } })
             .commit()
         backCallback!!.isEnabled = true
-        Log.d("TAG", "ADD, ${childFragmentManager.fragments.size}")
     }
 
     override fun onAttach(context: Context) {
@@ -65,7 +62,6 @@ class BaseWrapperFragment : BaseFragment {
                 // Remove all fragments from the childFragmentManager,
                 // but exclude the first added child fragment.
                 // This child fragment will be deleted with its parent.
-                Log.d("TAG", "BASEWRAPPED!")
                 childFragmentManager.popBackStack()
                 if (childFragmentManager.backStackEntryCount == 1) {
                     backCallback!!.isEnabled = false

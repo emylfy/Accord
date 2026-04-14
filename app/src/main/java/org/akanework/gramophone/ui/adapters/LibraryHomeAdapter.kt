@@ -3,7 +3,6 @@ package org.akanework.gramophone.ui.adapters
 import android.content.Context
 import android.text.Spannable
 import android.text.SpannableString
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -53,7 +52,6 @@ class LibraryHomeAdapter(
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         if (innerAlbumClass[position] is LibraryFragment.PlaceHolder) {
-            Log.d("TAG", "Tagged special.")
             holder.cover.load(R.drawable.ic_default_cover_favourite)
             val text = context.getString(R.string.playlist_favourite) + " "
             val spannableString = SpannableString(text)
@@ -72,7 +70,6 @@ class LibraryHomeAdapter(
                 fragment.findBaseWrapperFragment()?.replaceFragment(LibrarySongSubFragment())
             }
         } else {
-            Log.d("TAG", "Normal item.")
             val album = innerAlbumClass[position]
             holder.cover.load(album.cover) {
                 coolCrossfade(true)

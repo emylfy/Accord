@@ -1,7 +1,6 @@
 package org.akanework.gramophone.ui.fragments
 
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -71,7 +70,6 @@ class LibrarySongSubFragment : BaseFragment(), Observer<List<PlaylistWithMediaIt
         recyclerView.fastScroll(songAdapter, songAdapter.itemHeightHelper)
 
         topAppBar.setNavigationOnClickListener {
-            Log.d("TAG", "ok${requireParentFragment().childFragmentManager.fragments.size}")
             (requireParentFragment() as BaseWrapperFragment).childFragmentManager.popBackStack()
         }
 
@@ -95,7 +93,6 @@ class LibrarySongSubFragment : BaseFragment(), Observer<List<PlaylistWithMediaIt
             }
 
         }
-        Log.d("TAG", "MEASURETIME: $measureTime")
     }
 
     override fun onDestroy() {
